@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "118576506916",
+    "project_id": "equilibra-mobile",
+    "storage_bucket": "equilibra-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:118576506916:android:736296b86ae96421b250b1",
+        "android_client_info": {
+          "package_name": "com.example.equilibra_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuuUXrjT1nAchXi2S9Orsb69ZBEvTUVLI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
