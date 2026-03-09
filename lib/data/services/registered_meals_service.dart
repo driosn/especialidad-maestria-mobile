@@ -20,6 +20,7 @@ class RegisteredMealsService {
       _firestore.collection(_collection);
 
   String? get _userId => _auth.currentUser?.uid;
+  String? get currentUserId => _userId;
 
   /// Comidas registradas para un día.
   Future<List<RegisteredMealModel>> getByDate(DateTime date) async {

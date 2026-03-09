@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:equilibra_mobile/data/models/registered_medical_visit_model.dart';
+import 'package:equilibra_mobile/data/services/offline_pending_service.dart';
 import 'package:equilibra_mobile/data/services/registered_medical_visits_service.dart';
 import 'package:equilibra_mobile/presentation/cubits/visitas_medicas_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,23 +10,51 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class VisitasMedicasCubit extends Cubit<VisitasMedicasState> {
   VisitasMedicasCubit({
     RegisteredMedicalVisitsService? service,
+    OfflinePendingService? offlinePendingService,
   })  : _service = service ?? RegisteredMedicalVisitsService(),
+        _offlinePending = offlinePendingService ?? OfflinePendingService(),
         super(VisitasMedicasState()) {
     _loadYear(state.selectedYear);
-    _subscription = _service.watchAll().listen(_onVisitsUpdated);
+    _subscription = _service.watchAll().listen((all) {
+      _filterAndEmitForYear(all, state.selectedYear);
+    });
   }
 
   final RegisteredMedicalVisitsService _service;
+  final OfflinePendingService _offlinePending;
   StreamSubscription<List<RegisteredMedicalVisitModel>>? _subscription;
+
+  Future<void> _mergePending(List<RegisteredMedicalVisitModel> fromFirestore) async {
+    final pending = await _offlinePending.getByCollection(
+      'registeredMedicalVisits',
+      year: state.selectedYear,
+    );
+    final pendingIds = <String>{};
+    final pendingList = <RegisteredMedicalVisitModel>[];
+    for (final op in pending) {
+      try {
+        final map = OfflinePendingService.parseDataMap(op.data);
+        pendingList.add(RegisteredMedicalVisitModel.fromMap(op.id, map));
+        pendingIds.add(op.id);
+      } catch (_) {}
+    }
+    final existingIds = fromFirestore.map((v) => v.id).toSet();
+    final merged = [
+      ...fromFirestore,
+      ...pendingList.where((v) => !existingIds.contains(v.id)),
+    ];
+    merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    emit(state.copyWith(visits: merged, pendingVisitIds: pendingIds));
+  }
 
   void _onVisitsUpdated(List<RegisteredMedicalVisitModel> all) {
     _filterAndEmitForYear(all, state.selectedYear);
   }
 
-  void _filterAndEmitForYear(
+  Future<void> _filterAndEmitForYear(
     List<RegisteredMedicalVisitModel> all,
     int year,
-  ) {
+  ) async {
     final start = DateTime(year, 1, 1);
     final end = DateTime(year + 1, 1, 1);
     final forYear = all
@@ -32,14 +62,15 @@ class VisitasMedicasCubit extends Cubit<VisitasMedicasState> {
             !v.createdAt.isBefore(start) && v.createdAt.isBefore(end))
         .toList();
     forYear.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    emit(state.copyWith(visits: forYear));
+    await _mergePending(forYear);
   }
 
   Future<void> _loadYear(int year) async {
     emit(state.copyWith(loading: true, error: null));
     try {
       final visits = await _service.getByYear(year);
-      emit(state.copyWith(visits: visits, loading: false));
+      await _mergePending(visits);
+      emit(state.copyWith(loading: false));
     } catch (e, _) {
       emit(state.copyWith(loading: false, error: e.toString()));
     }
@@ -65,14 +96,54 @@ class VisitasMedicasCubit extends Cubit<VisitasMedicasState> {
         description: description,
       );
       final all = await _service.getAll();
-      _filterAndEmitForYear(all, state.selectedYear);
+      await _filterAndEmitForYear(all, state.selectedYear);
     } catch (e, _) {
-      emit(state.copyWith(error: e.toString()));
+      final uid = _service.currentUserId ?? '';
+      if (uid.isEmpty) {
+        emit(state.copyWith(error: e.toString()));
+        return;
+      }
+      final id = 'off_${DateTime.now().millisecondsSinceEpoch}';
+      final now = DateTime.now();
+      final model = RegisteredMedicalVisitModel(
+        id: id,
+        userId: uid,
+        doctorName: doctorName,
+        field: field,
+        title: title,
+        description: description,
+        createdAt: now,
+      );
+      final rawMap = Map<String, dynamic>.from(model.toMap());
+      final safeMap = OfflinePendingService.mapToJsonSafe(rawMap);
+      await _offlinePending.addPending(
+        id: id,
+        type: 'POST',
+        collection: 'registeredMedicalVisits',
+        data: jsonEncode(safeMap),
+      );
+      final merged = [...state.visits, model];
+      merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final pendingIds = {...state.pendingVisitIds, id};
+      emit(state.copyWith(visits: merged, pendingVisitIds: pendingIds, error: null));
     }
   }
 
   Future<void> deleteVisit(String id) async {
+    if (state.pendingVisitIds.contains(id)) {
+      await _offlinePending.remove(id);
+      final nextVisits = state.visits.where((v) => v.id != id).toList();
+      final nextPending = {...state.pendingVisitIds}..remove(id);
+      emit(state.copyWith(visits: nextVisits, pendingVisitIds: nextPending));
+      return;
+    }
     await _service.delete(id);
+  }
+
+  Future<void> syncPendingVisit(String id) async {
+    await _offlinePending.syncOne(id);
+    final next = {...state.pendingVisitIds}..remove(id);
+    emit(state.copyWith(pendingVisitIds: next));
   }
 
   @override

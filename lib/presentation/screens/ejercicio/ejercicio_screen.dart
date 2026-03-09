@@ -86,7 +86,9 @@ class _EjercicioView extends StatelessWidget {
                 ),
                 EjerciciosList(
                   exercises: state.exercises,
+                  pendingExerciseIds: state.pendingExerciseIds,
                   onOptionsTap: (ex) => _showOptions(context, ex.id),
+                  onSyncTap: (id) => _onSyncExerciseTap(context, id),
                 ),
               ],
             ),
@@ -147,6 +149,29 @@ class _EjercicioView extends StatelessWidget {
           backgroundColor: AppColors.healthPrimary,
         ),
       );
+    }
+  }
+
+  Future<void> _onSyncExerciseTap(BuildContext context, String exerciseId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sincronizar registro'),
+        content: const Text('¿Quieres sincronizar este registro?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sincronizar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && context.mounted) {
+      await context.read<EjercicioCubit>().syncPendingExercise(exerciseId);
     }
   }
 

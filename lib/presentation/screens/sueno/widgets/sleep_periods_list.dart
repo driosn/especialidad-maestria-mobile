@@ -6,11 +6,15 @@ class SleepPeriodsList extends StatelessWidget {
   const SleepPeriodsList({
     super.key,
     required this.periods,
+    this.pendingSleepIds = const {},
     this.onOptionsTap,
+    this.onSyncTap,
   });
 
   final List<RegisteredSleepTimeModel> periods;
+  final Set<String> pendingSleepIds;
   final void Function(RegisteredSleepTimeModel period)? onOptionsTap;
+  final void Function(String periodId)? onSyncTap;
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +32,15 @@ class SleepPeriodsList extends StatelessWidget {
     }
     return Column(
       children: periods
-          .map((p) => SleepPeriodCard(
-                period: p,
-                onOptionsTap: onOptionsTap != null ? () => onOptionsTap!(p) : null,
-              ))
+          .map((p) {
+            final isPendingSync = pendingSleepIds.contains(p.id);
+            return SleepPeriodCard(
+              period: p,
+              isPendingSync: isPendingSync,
+              onOptionsTap: onOptionsTap != null ? () => onOptionsTap!(p) : null,
+              onSyncTap: isPendingSync && onSyncTap != null ? () => onSyncTap!(p.id) : null,
+            );
+          })
           .toList(),
     );
   }

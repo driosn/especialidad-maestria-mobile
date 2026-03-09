@@ -35,21 +35,11 @@ class EquilibraApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
         ),
-        home: BlocListener<AuthCubit, AuthState>(
-          listener: (context, state) {
-            if (state is AuthAuthenticated) {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
-                (route) => false,
-              );
-            }
+        home: BlocBuilder<AuthCubit, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAuthenticated) return const HomeScreen();
+            return const LoginScreen();
           },
-          child: BlocBuilder<AuthCubit, AuthState>(
-            builder: (context, state) {
-              if (state is AuthAuthenticated) return const HomeScreen();
-              return const LoginScreen();
-            },
-          ),
         ),
       ),
     );

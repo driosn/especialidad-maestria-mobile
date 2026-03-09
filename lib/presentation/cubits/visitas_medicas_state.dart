@@ -4,12 +4,14 @@ class VisitasMedicasState {
   VisitasMedicasState({
     int? year,
     this.visits = const [],
+    this.pendingVisitIds = const {},
     this.loading = false,
     this.error,
   }) : selectedYear = year ?? DateTime.now().year;
 
   final int selectedYear;
   final List<RegisteredMedicalVisitModel> visits;
+  final Set<String> pendingVisitIds;
   final bool loading;
   final String? error;
 
@@ -25,12 +27,14 @@ class VisitasMedicasState {
   VisitasMedicasState copyWith({
     int? selectedYear,
     List<RegisteredMedicalVisitModel>? visits,
+    Set<String>? pendingVisitIds,
     bool? loading,
     String? error,
   }) {
     return VisitasMedicasState(
       year: selectedYear ?? this.selectedYear,
       visits: visits ?? this.visits,
+      pendingVisitIds: pendingVisitIds ?? this.pendingVisitIds,
       loading: loading ?? this.loading,
       error: error,
     );

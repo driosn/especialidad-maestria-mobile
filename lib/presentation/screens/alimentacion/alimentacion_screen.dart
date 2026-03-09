@@ -84,7 +84,9 @@ class _AlimentacionView extends StatelessWidget {
                 const SizedBox(height: 20),
                 MealsList(
                   meals: state.meals,
+                  pendingMealIds: state.pendingMealIds,
                   onMealTap: (meal) => _onMealTap(context, state, meal.id),
+                  onSyncTap: (id) => _onSyncMealTap(context, id),
                 ),
               ],
             ),
@@ -115,5 +117,28 @@ class _AlimentacionView extends StatelessWidget {
       result.ingredientId,
       result.quantity,
     );
+  }
+
+  Future<void> _onSyncMealTap(BuildContext context, String mealId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sincronizar registro'),
+        content: const Text('¿Quieres sincronizar este registro?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sincronizar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && context.mounted) {
+      await context.read<AlimentacionCubit>().syncPendingMeal(mealId);
+    }
   }
 }

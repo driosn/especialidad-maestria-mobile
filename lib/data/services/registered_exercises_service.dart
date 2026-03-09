@@ -17,6 +17,7 @@ class RegisteredExercisesService {
       _firestore.collection(_collection);
 
   String? get _userId => _auth.currentUser?.uid;
+  String? get currentUserId => _userId;
 
   Future<List<RegisteredExerciseModel>> getByDate(DateTime date) async {
     final uid = _userId;

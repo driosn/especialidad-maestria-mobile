@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:equilibra_mobile/data/models/registered_meal_ingredient_model.dart';
 import 'package:equilibra_mobile/data/models/registered_meal_model.dart';
 import 'package:equilibra_mobile/data/services/default_ingredients_service.dart';
 import 'package:equilibra_mobile/data/services/meal_types_service.dart';
+import 'package:equilibra_mobile/data/services/offline_pending_service.dart';
 import 'package:equilibra_mobile/data/services/registered_meals_service.dart';
 import 'package:equilibra_mobile/presentation/cubits/alimentacion_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,10 +15,12 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
     DefaultIngredientsService? defaultIngredientsService,
     MealTypesService? mealTypesService,
     RegisteredMealsService? registeredMealsService,
+    OfflinePendingService? offlinePendingService,
   }) : _defaultIngredients =
            defaultIngredientsService ?? DefaultIngredientsService(),
        _mealTypes = mealTypesService ?? MealTypesService(),
        _registeredMeals = registeredMealsService ?? RegisteredMealsService(),
+       _offlinePending = offlinePendingService ?? OfflinePendingService(),
        super(AlimentacionState()) {
     _loadInitial();
     _subscription = _registeredMeals
@@ -27,10 +31,33 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
   final DefaultIngredientsService _defaultIngredients;
   final MealTypesService _mealTypes;
   final RegisteredMealsService _registeredMeals;
+  final OfflinePendingService _offlinePending;
   StreamSubscription<List<RegisteredMealModel>>? _subscription;
 
+  Future<void> _mergePending(List<RegisteredMealModel> fromFirestore) async {
+    final pending = await _offlinePending.getByCollection(
+      'registeredMeals',
+      date: state.selectedDate,
+    );
+    final pendingIds = <String>{};
+    final pendingMeals = <RegisteredMealModel>[];
+    for (final op in pending) {
+      try {
+        final map = OfflinePendingService.parseDataMap(op.data);
+        pendingMeals.add(RegisteredMealModel.fromMap(op.id, map));
+        pendingIds.add(op.id);
+      } catch (_) {}
+    }
+    final existingIds = fromFirestore.map((m) => m.id).toSet();
+    final merged = [
+      ...fromFirestore,
+      ...pendingMeals.where((m) => !existingIds.contains(m.id)),
+    ];
+    emit(state.copyWith(meals: merged, pendingMealIds: pendingIds));
+  }
+
   void _onMealsUpdated(List<RegisteredMealModel> meals) {
-    emit(state.copyWith(meals: meals));
+    _mergePending(meals);
   }
 
   Future<void> _loadInitial() async {
@@ -39,11 +66,11 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
       final types = await _mealTypes.getAll();
       final ingredients = await _defaultIngredients.getAll();
       final meals = await _registeredMeals.getByDate(state.selectedDate);
+      await _mergePending(meals);
       emit(
         state.copyWith(
           mealTypes: types,
           defaultIngredients: ingredients,
-          meals: meals,
           loading: false,
         ),
       );
@@ -71,9 +98,34 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
         date: state.selectedDate,
       );
     } catch (e, _) {
-      emit(state.copyWith(error: e.toString()));
+      final uid = _registeredMeals.currentUserId ?? '';
+      if (uid.isEmpty) {
+        emit(state.copyWith(error: e.toString()));
+        return;
+      }
+      final id = 'off_${DateTime.now().millisecondsSinceEpoch}';
+      final meal = RegisteredMealModel(
+        id: id,
+        userId: uid,
+        mealType: mealType,
+        ingredients: [],
+        createdAt: DateTime.now(),
+        date: state.selectedDate,
+      );
+      final rawMap = Map<String, dynamic>.from(meal.toMap());
+      final safeMap = OfflinePendingService.mapToJsonSafe(rawMap);
+      await _offlinePending.addPending(
+        id: id,
+        type: 'POST',
+        collection: 'registeredMeals',
+        data: jsonEncode(safeMap),
+      );
+      final merged = [...state.meals, meal];
+      final pendingIds = {...state.pendingMealIds, id};
+      emit(state.copyWith(meals: merged, pendingMealIds: pendingIds, error: null));
     }
   }
+
 
   Future<void> addIngredientToMeal(
     String mealId,
@@ -102,7 +154,20 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
   }
 
   Future<void> deleteMeal(String mealId) async {
+    if (state.pendingMealIds.contains(mealId)) {
+      await _offlinePending.remove(mealId);
+      final nextMeals = state.meals.where((m) => m.id != mealId).toList();
+      final nextPending = {...state.pendingMealIds}..remove(mealId);
+      emit(state.copyWith(meals: nextMeals, pendingMealIds: nextPending));
+      return;
+    }
     await _registeredMeals.delete(mealId);
+  }
+
+  Future<void> syncPendingMeal(String id) async {
+    await _offlinePending.syncOne(id);
+    final next = {...state.pendingMealIds}..remove(id);
+    emit(state.copyWith(pendingMealIds: next));
   }
 
   @override

@@ -8,6 +8,7 @@ class AlimentacionState {
     this.mealTypes = const [],
     this.defaultIngredients = const [],
     this.meals = const [],
+    this.pendingMealIds = const {},
     this.loading = false,
     this.error,
   }) : selectedDate = selectedDate ?? DateTime.now();
@@ -16,6 +17,7 @@ class AlimentacionState {
   final List<MealTypeModel> mealTypes;
   final List<DefaultIngredientModel> defaultIngredients;
   final List<RegisteredMealModel> meals;
+  final Set<String> pendingMealIds;
   final bool loading;
   final String? error;
 
@@ -31,6 +33,7 @@ class AlimentacionState {
     List<MealTypeModel>? mealTypes,
     List<DefaultIngredientModel>? defaultIngredients,
     List<RegisteredMealModel>? meals,
+    Set<String>? pendingMealIds,
     bool? loading,
     String? error,
   }) {
@@ -39,6 +42,7 @@ class AlimentacionState {
       mealTypes: mealTypes ?? this.mealTypes,
       defaultIngredients: defaultIngredients ?? this.defaultIngredients,
       meals: meals ?? this.meals,
+      pendingMealIds: pendingMealIds ?? this.pendingMealIds,
       loading: loading ?? this.loading,
       error: error,
     );

@@ -7,11 +7,15 @@ class EjerciciosList extends StatelessWidget {
   const EjerciciosList({
     super.key,
     required this.exercises,
+    this.pendingExerciseIds = const {},
     this.onOptionsTap,
+    this.onSyncTap,
   });
 
   final List<RegisteredExerciseModel> exercises;
+  final Set<String> pendingExerciseIds;
   final void Function(RegisteredExerciseModel exercise)? onOptionsTap;
+  final void Function(String exerciseId)? onSyncTap;
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +41,12 @@ class EjerciciosList extends StatelessWidget {
       itemCount: exercises.length,
       itemBuilder: (context, index) {
         final ex = exercises[index];
+        final isPendingSync = pendingExerciseIds.contains(ex.id);
         return RegisteredExerciseCard(
           exercise: ex,
+          isPendingSync: isPendingSync,
           onOptionsTap: onOptionsTap != null ? () => onOptionsTap!(ex) : null,
+          onSyncTap: isPendingSync && onSyncTap != null ? () => onSyncTap!(ex.id) : null,
         );
       },
     );

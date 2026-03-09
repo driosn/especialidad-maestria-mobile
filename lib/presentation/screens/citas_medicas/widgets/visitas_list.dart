@@ -7,11 +7,15 @@ class VisitasList extends StatelessWidget {
   const VisitasList({
     super.key,
     required this.visits,
+    this.pendingVisitIds = const {},
     this.onOptionsTap,
+    this.onSyncTap,
   });
 
   final List<RegisteredMedicalVisitModel> visits;
+  final Set<String> pendingVisitIds;
   final void Function(RegisteredMedicalVisitModel visit)? onOptionsTap;
+  final void Function(String visitId)? onSyncTap;
 
   @override
   Widget build(BuildContext context) {
@@ -29,10 +33,15 @@ class VisitasList extends StatelessWidget {
     }
     return Column(
       children: visits
-          .map((v) => MedicalVisitCard(
-                visit: v,
-                onOptionsTap: onOptionsTap != null ? () => onOptionsTap!(v) : null,
-              ))
+          .map((v) {
+            final isPendingSync = pendingVisitIds.contains(v.id);
+            return MedicalVisitCard(
+              visit: v,
+              isPendingSync: isPendingSync,
+              onOptionsTap: onOptionsTap != null ? () => onOptionsTap!(v) : null,
+              onSyncTap: isPendingSync && onSyncTap != null ? () => onSyncTap!(v.id) : null,
+            );
+          })
           .toList(),
     );
   }

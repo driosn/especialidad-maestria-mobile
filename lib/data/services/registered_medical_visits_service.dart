@@ -18,6 +18,7 @@ class RegisteredMedicalVisitsService {
       _firestore.collection(_collection);
 
   String? get _userId => _auth.currentUser?.uid;
+  String? get currentUserId => _userId;
 
   /// Visitas del usuario ordenadas por fecha (más reciente primero).
   Future<List<RegisteredMedicalVisitModel>> getAll() async {

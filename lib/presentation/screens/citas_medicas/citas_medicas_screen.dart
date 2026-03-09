@@ -71,7 +71,9 @@ class _CitasMedicasView extends StatelessWidget {
                 const SizedBox(height: 8),
                 VisitasList(
                   visits: state.visits,
+                  pendingVisitIds: state.pendingVisitIds,
                   onOptionsTap: (visit) => _showOptions(context, visit.id),
+                  onSyncTap: (id) => _onSyncVisitTap(context, id),
                 ),
                 const SizedBox(height: 24),
               ],
@@ -98,6 +100,29 @@ class _CitasMedicasView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _onSyncVisitTap(BuildContext context, String visitId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sincronizar registro'),
+        content: const Text('¿Quieres sincronizar este registro?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sincronizar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && context.mounted) {
+      await context.read<VisitasMedicasCubit>().syncPendingVisit(visitId);
+    }
   }
 
   Future<void> _onRegisterVisit(BuildContext context) async {

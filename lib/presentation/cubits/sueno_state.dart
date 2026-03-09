@@ -4,12 +4,14 @@ class SuenoState {
   SuenoState({
     DateTime? selectedDate,
     this.sleepTimes = const [],
+    this.pendingSleepIds = const {},
     this.loading = false,
     this.error,
   }) : selectedDate = selectedDate ?? DateTime.now();
 
   final DateTime selectedDate;
   final List<RegisteredSleepTimeModel> sleepTimes;
+  final Set<String> pendingSleepIds;
   final bool loading;
   final String? error;
 
@@ -30,12 +32,14 @@ class SuenoState {
   SuenoState copyWith({
     DateTime? selectedDate,
     List<RegisteredSleepTimeModel>? sleepTimes,
+    Set<String>? pendingSleepIds,
     bool? loading,
     String? error,
   }) {
     return SuenoState(
       selectedDate: selectedDate ?? this.selectedDate,
       sleepTimes: sleepTimes ?? this.sleepTimes,
+      pendingSleepIds: pendingSleepIds ?? this.pendingSleepIds,
       loading: loading ?? this.loading,
       error: error,
     );

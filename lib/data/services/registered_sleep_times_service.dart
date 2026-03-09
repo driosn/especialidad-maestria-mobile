@@ -18,6 +18,7 @@ class RegisteredSleepTimesService {
       _firestore.collection(_collection);
 
   String? get _userId => _auth.currentUser?.uid;
+  String? get currentUserId => _userId;
 
   /// Períodos que empiezan en el día [date].
   Future<List<RegisteredSleepTimeModel>> getByDate(DateTime date) async {

@@ -26,12 +26,6 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Future<void> _submit() async {
-    context.read<AuthCubit>().signIn(
-      email: 'davidsamuelrios07@gmail.com',
-      password: 'Test1234',
-    );
-    return;
-
     if (!_formKey.currentState!.validate()) return;
     await context.read<AuthCubit>().signIn(
       email: _emailController.text.trim(),
@@ -132,7 +126,9 @@ class _LoginFormState extends State<LoginForm> {
                     if (state.contains(WidgetState.selected)) {
                       return AppColors.primary;
                     }
-                    return const Color(0xFFEEEEEE); // medio blanco cuando no está seleccionado
+                    return const Color(
+                      0xFFEEEEEE,
+                    ); // medio blanco cuando no está seleccionado
                   }),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),

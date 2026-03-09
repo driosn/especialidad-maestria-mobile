@@ -27,11 +27,15 @@ class MedicalVisitCard extends StatelessWidget {
   const MedicalVisitCard({
     super.key,
     required this.visit,
+    this.isPendingSync = false,
     this.onOptionsTap,
+    this.onSyncTap,
   });
 
   final RegisteredMedicalVisitModel visit;
+  final bool isPendingSync;
   final VoidCallback? onOptionsTap;
+  final VoidCallback? onSyncTap;
 
   @override
   Widget build(BuildContext context) {
@@ -97,27 +101,57 @@ class MedicalVisitCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.healthPrimaryLight,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.check_circle, size: 14, color: AppColors.healthPrimary),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Completada',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.healthPrimary,
-                              fontWeight: FontWeight.w600,
+                if (isPendingSync && onSyncTap != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: GestureDetector(
+                      onTap: onSyncTap,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cloud_off, size: 14, color: Colors.orange.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Pendiente sinc.',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Colors.orange.shade800,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
+                          ],
+                        ),
                       ),
-                    ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.healthPrimaryLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle, size: 14, color: AppColors.healthPrimary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Completada',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: AppColors.healthPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:equilibra_mobile/di/injection.dart';
 import 'package:equilibra_mobile/data/services/user_service.dart';
 import 'package:equilibra_mobile/presentation/cubits/auth_cubit.dart';
 import 'package:equilibra_mobile/presentation/screens/estadisticas/estadisticas_screen.dart';
+import 'package:equilibra_mobile/presentation/screens/sincronizacion/sincronizacion_screen.dart';
 import 'package:equilibra_mobile/presentation/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -95,6 +96,24 @@ class ProfileDrawer extends StatelessWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const EstadisticasScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.sync, color: AppColors.primary),
+                  title: Text(
+                    'Sincronización',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const SincronizacionScreen(),
                       ),
                     );
                   },

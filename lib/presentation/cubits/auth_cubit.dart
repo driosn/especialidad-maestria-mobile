@@ -47,7 +47,10 @@ class AuthCubit extends Cubit<AuthState> {
       await _authService.signIn(email: email, password: password);
       checkAuth();
     } catch (e, _) {
-      emit(AuthError(e.toString()));
+      if (e.toString().toLowerCase().contains('invalid-credential')) {
+        emit(AuthError('Correo o contraseña incorrectos'));
+      }
+      return;
     }
   }
 

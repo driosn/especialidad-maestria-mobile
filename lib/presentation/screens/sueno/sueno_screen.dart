@@ -60,7 +60,9 @@ class _SuenoView extends StatelessWidget {
                 const SizedBox(height: 16),
                 SleepPeriodsList(
                   periods: state.sleepTimes,
+                  pendingSleepIds: state.pendingSleepIds,
                   onOptionsTap: (period) => _showOptions(context, period.id),
+                  onSyncTap: (id) => _onSyncSleepTap(context, id),
                 ),
                 const SizedBox(height: 16),
                 TotalSleepCard(
@@ -124,6 +126,29 @@ class _SuenoView extends StatelessWidget {
   static bool _isToday(DateTime d) {
     final now = DateTime.now();
     return d.year == now.year && d.month == now.month && d.day == now.day;
+  }
+
+  Future<void> _onSyncSleepTap(BuildContext context, String periodId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sincronizar registro'),
+        content: const Text('¿Quieres sincronizar este registro?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sincronizar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && context.mounted) {
+      await context.read<SuenoCubit>().syncPendingSleep(periodId);
+    }
   }
 
   void _showOptions(BuildContext context, String periodId) {
