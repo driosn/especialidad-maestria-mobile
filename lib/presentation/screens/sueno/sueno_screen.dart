@@ -38,41 +38,45 @@ class _SuenoView extends StatelessWidget {
       ),
       body: BlocBuilder<SuenoCubit, SuenoState>(
         builder: (context, state) {
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SuenoDateNav(
-                  date: state.selectedDate,
-                  onPrevious: () {
-                    final d = state.selectedDate;
-                    context.read<SuenoCubit>().setDate(
-                      DateTime(d.year, d.month, d.day - 1),
-                    );
-                  },
-                  onNext: () {
-                    final d = state.selectedDate;
-                    context.read<SuenoCubit>().setDate(
-                      DateTime(d.year, d.month, d.day + 1),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                SleepPeriodsList(
-                  periods: state.sleepTimes,
-                  pendingSleepIds: state.pendingSleepIds,
-                  onOptionsTap: (period) => _showOptions(context, period.id),
-                  onSyncTap: (id) => _onSyncSleepTap(context, id),
-                ),
-                const SizedBox(height: 16),
-                TotalSleepCard(
-                  title: _isToday(state.selectedDate)
-                      ? 'Total de sueño hoy'
-                      : 'Total de sueño',
-                  totalFormatted: state.totalDurationFormatted,
-                  periodCount: state.sleepTimes.length,
-                ),
-              ],
+          return RefreshIndicator(
+            onRefresh: () => context.read<SuenoCubit>().refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SuenoDateNav(
+                    date: state.selectedDate,
+                    onPrevious: () {
+                      final d = state.selectedDate;
+                      context.read<SuenoCubit>().setDate(
+                        DateTime(d.year, d.month, d.day - 1),
+                      );
+                    },
+                    onNext: () {
+                      final d = state.selectedDate;
+                      context.read<SuenoCubit>().setDate(
+                        DateTime(d.year, d.month, d.day + 1),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SleepPeriodsList(
+                    periods: state.sleepTimes,
+                    pendingSleepIds: state.pendingSleepIds,
+                    onOptionsTap: (period) => _showOptions(context, period.id),
+                    onSyncTap: (id) => _onSyncSleepTap(context, id),
+                  ),
+                  const SizedBox(height: 16),
+                  TotalSleepCard(
+                    title: _isToday(state.selectedDate)
+                        ? 'Total de sueño hoy'
+                        : 'Total de sueño',
+                    totalFormatted: state.totalDurationFormatted,
+                    periodCount: state.sleepTimes.length,
+                  ),
+                ],
+              ),
             ),
           );
         },

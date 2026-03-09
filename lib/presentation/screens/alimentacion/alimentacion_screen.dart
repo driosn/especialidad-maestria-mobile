@@ -57,38 +57,42 @@ class _AlimentacionView extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                DateNav(
-                  date: state.selectedDate,
-                  onPrevious: () {
-                    final d = state.selectedDate;
-                    context.read<AlimentacionCubit>().setDate(
-                      DateTime(d.year, d.month, d.day - 1),
-                    );
-                  },
-                  onNext: () {
-                    final d = state.selectedDate;
-                    context.read<AlimentacionCubit>().setDate(
-                      DateTime(d.year, d.month, d.day + 1),
-                    );
-                  },
-                ),
-                NutritionSummaryCard(
-                  calories: state.totalKcal,
-                  proteins: state.totalProteins,
-                  carbs: state.totalCarbs,
-                ),
-                const SizedBox(height: 20),
-                MealsList(
-                  meals: state.meals,
-                  pendingMealIds: state.pendingMealIds,
-                  onMealTap: (meal) => _onMealTap(context, state, meal.id),
-                  onSyncTap: (id) => _onSyncMealTap(context, id),
-                ),
-              ],
+          return RefreshIndicator(
+            onRefresh: () => context.read<AlimentacionCubit>().refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DateNav(
+                    date: state.selectedDate,
+                    onPrevious: () {
+                      final d = state.selectedDate;
+                      context.read<AlimentacionCubit>().setDate(
+                        DateTime(d.year, d.month, d.day - 1),
+                      );
+                    },
+                    onNext: () {
+                      final d = state.selectedDate;
+                      context.read<AlimentacionCubit>().setDate(
+                        DateTime(d.year, d.month, d.day + 1),
+                      );
+                    },
+                  ),
+                  NutritionSummaryCard(
+                    calories: state.totalKcal,
+                    proteins: state.totalProteins,
+                    carbs: state.totalCarbs,
+                  ),
+                  const SizedBox(height: 20),
+                  MealsList(
+                    meals: state.meals,
+                    pendingMealIds: state.pendingMealIds,
+                    onMealTap: (meal) => _onMealTap(context, state, meal.id),
+                    onSyncTap: (id) => _onSyncMealTap(context, id),
+                  ),
+                ],
+              ),
             ),
           );
         },

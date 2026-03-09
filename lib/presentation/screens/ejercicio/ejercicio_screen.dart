@@ -43,54 +43,58 @@ class _EjercicioView extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                EjercicioDateNav(
-                  date: state.selectedDate,
-                  onPrevious: () {
-                    final d = state.selectedDate;
-                    context.read<EjercicioCubit>().setDate(
-                      DateTime(d.year, d.month, d.day - 1),
-                    );
-                  },
-                  onNext: () {
-                    final d = state.selectedDate;
-                    context.read<EjercicioCubit>().setDate(
-                      DateTime(d.year, d.month, d.day + 1),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                EjercicioSummaryCards(
-                  kcalBurned: state.totalKcal,
-                  activeMinutes: state.totalDurationMinutes,
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Ejercicios registrados',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                      ),
-                    ],
+          return RefreshIndicator(
+            onRefresh: () => context.read<EjercicioCubit>().refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  EjercicioDateNav(
+                    date: state.selectedDate,
+                    onPrevious: () {
+                      final d = state.selectedDate;
+                      context.read<EjercicioCubit>().setDate(
+                        DateTime(d.year, d.month, d.day - 1),
+                      );
+                    },
+                    onNext: () {
+                      final d = state.selectedDate;
+                      context.read<EjercicioCubit>().setDate(
+                        DateTime(d.year, d.month, d.day + 1),
+                      );
+                    },
                   ),
-                ),
-                EjerciciosList(
-                  exercises: state.exercises,
-                  pendingExerciseIds: state.pendingExerciseIds,
-                  onOptionsTap: (ex) => _showOptions(context, ex.id),
-                  onSyncTap: (id) => _onSyncExerciseTap(context, id),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  EjercicioSummaryCards(
+                    kcalBurned: state.totalKcal,
+                    activeMinutes: state.totalDurationMinutes,
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Ejercicios registrados',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  EjerciciosList(
+                    exercises: state.exercises,
+                    pendingExerciseIds: state.pendingExerciseIds,
+                    onOptionsTap: (ex) => _showOptions(context, ex.id),
+                    onSyncTap: (id) => _onSyncExerciseTap(context, id),
+                  ),
+                ],
+              ),
             ),
           );
         },

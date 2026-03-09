@@ -35,7 +35,8 @@ class AuthCubit extends Cubit<AuthState> {
         name: name,
         lastName: lastName,
       );
-      checkAuth();
+      await _authService.signOut();
+      emit(const AuthUnauthenticated());
     } catch (e, _) {
       emit(AuthError(e.toString()));
     }
@@ -47,10 +48,7 @@ class AuthCubit extends Cubit<AuthState> {
       await _authService.signIn(email: email, password: password);
       checkAuth();
     } catch (e, _) {
-      if (e.toString().toLowerCase().contains('invalid-credential')) {
-        emit(AuthError('Correo o contraseña incorrectos'));
-      }
-      return;
+      emit(const AuthError('Usuario o contraseña incorrectos'));
     }
   }
 

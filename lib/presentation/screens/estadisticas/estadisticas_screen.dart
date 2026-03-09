@@ -1,10 +1,10 @@
-import 'package:equilibra_mobile/di/injection.dart';
 import 'package:equilibra_mobile/data/models/registered_exercise_model.dart';
 import 'package:equilibra_mobile/data/models/registered_meal_model.dart';
 import 'package:equilibra_mobile/data/models/registered_sleep_time_model.dart';
 import 'package:equilibra_mobile/data/services/registered_exercises_service.dart';
 import 'package:equilibra_mobile/data/services/registered_meals_service.dart';
 import 'package:equilibra_mobile/data/services/registered_sleep_times_service.dart';
+import 'package:equilibra_mobile/di/injection.dart';
 import 'package:equilibra_mobile/presentation/screens/estadisticas/widgets/ejercicios_pie_chart.dart';
 import 'package:equilibra_mobile/presentation/screens/estadisticas/widgets/nutrition_line_chart.dart';
 import 'package:equilibra_mobile/presentation/screens/estadisticas/widgets/sleep_week_line_chart.dart';
@@ -58,16 +58,22 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       final meals7 = <RegisteredMealModel>[];
       final meals30 = <RegisteredMealModel>[];
       for (var i = 0; i < 7; i++) {
-        meals7.addAll(await mealsService.getByDate(monday.add(Duration(days: i))));
+        meals7.addAll(
+          await mealsService.getByDate(monday.add(Duration(days: i))),
+        );
       }
       for (var i = 0; i < 30; i++) {
-        meals30.addAll(await mealsService.getByDate(today.subtract(Duration(days: i))));
+        meals30.addAll(
+          await mealsService.getByDate(today.subtract(Duration(days: i))),
+        );
       }
 
       // Sueño semana actual (Lun a Dom)
       final sleepWeek = <RegisteredSleepTimeModel>[];
       for (var i = 0; i < 7; i++) {
-        sleepWeek.addAll(await sleepService.getByDate(monday.add(Duration(days: i))));
+        sleepWeek.addAll(
+          await sleepService.getByDate(monday.add(Duration(days: i))),
+        );
       }
 
       if (mounted) {
@@ -97,11 +103,11 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'Estadísticas mensuales',
+          'Estadísticas semanales',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -113,51 +119,51 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.red[700]),
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: _load,
-                          child: const Text('Reintentar'),
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.red[700]),
                     ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        EjerciciosPieChart(exercises: _exercises),
-                        const SizedBox(height: 24),
-                        NutritionLineChart(
-                          meals7: _meals7,
-                          meals30: _meals30,
-                          today: DateTime(
-                            DateTime.now().year,
-                            DateTime.now().month,
-                            DateTime.now().day,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        SleepWeekLineChart(sleepPeriods: _sleepWeek),
-                      ],
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _load,
+                      child: const Text('Reintentar'),
                     ),
-                  ),
+                  ],
                 ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    EjerciciosPieChart(exercises: _exercises),
+                    const SizedBox(height: 24),
+                    NutritionLineChart(
+                      meals7: _meals7,
+                      meals30: _meals30,
+                      today: DateTime(
+                        DateTime.now().year,
+                        DateTime.now().month,
+                        DateTime.now().day,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SleepWeekLineChart(sleepPeriods: _sleepWeek),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }

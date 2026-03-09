@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:equilibra_mobile/presentation/theme/app_colors.dart';
+import 'package:flutter/material.dart';
 
 class NutritionSummaryCard extends StatelessWidget {
   const NutritionSummaryCard({
@@ -47,9 +47,9 @@ class NutritionSummaryCard extends StatelessWidget {
   }
 
   String _formatNumber(num n) {
-    if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(1).replaceAll('.0', '')},${(n % 1000).toStringAsFixed(0).padLeft(3, '0')}';
-    }
+    // if (n >= 1000) {
+    // return '${(n / 1000).toStringAsFixed(1).replaceAll('.0', '')},${(n % 1000).toStringAsFixed(0).padLeft(3, '0')}';
+    // }
     return n.toInt().toString();
   }
 }
@@ -72,16 +72,16 @@ class _Metric extends StatelessWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
         ),
       ],
     );

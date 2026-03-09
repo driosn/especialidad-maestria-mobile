@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:equilibra_mobile/data/models/registered_sleep_time_model.dart';
 import 'package:equilibra_mobile/data/services/offline_pending_service.dart';
+import 'package:equilibra_mobile/data/services/network_service.dart';
 import 'package:equilibra_mobile/data/services/registered_sleep_times_service.dart';
 import 'package:equilibra_mobile/presentation/cubits/sueno_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,9 +12,11 @@ class SuenoCubit extends Cubit<SuenoState> {
   SuenoCubit({
     RegisteredSleepTimesService? registeredSleepTimesService,
     OfflinePendingService? offlinePendingService,
+    NetworkService? networkService,
   })  : _service =
             registeredSleepTimesService ?? RegisteredSleepTimesService(),
         _offlinePending = offlinePendingService ?? OfflinePendingService(),
+        _network = networkService ?? NetworkService(),
         super(SuenoState()) {
     _subscription =
         _service.watchByDate(state.selectedDate).listen(_onSleepTimesUpdated);
@@ -21,6 +24,7 @@ class SuenoCubit extends Cubit<SuenoState> {
 
   final RegisteredSleepTimesService _service;
   final OfflinePendingService _offlinePending;
+  final NetworkService _network;
   StreamSubscription<List<RegisteredSleepTimeModel>>? _subscription;
 
   Future<void> _mergePending(List<RegisteredSleepTimeModel> fromFirestore) async {
@@ -57,11 +61,28 @@ class SuenoCubit extends Cubit<SuenoState> {
     _subscription = _service.watchByDate(day).listen(_onSleepTimesUpdated);
   }
 
+  /// Recarga períodos de sueño del día (pull-to-refresh).
+  Future<void> refresh() async {
+    final list = await _service.getByDate(state.selectedDate);
+    await _mergePending(list);
+  }
+
   Future<void> registerSleepTime({
     required String name,
     required DateTime startTimestamp,
     required DateTime endTimestamp,
   }) async {
+    final hasNet = await _network.hasConnection();
+
+    if (!hasNet) {
+      await _saveSleepOffline(
+        name: name,
+        startTimestamp: startTimestamp,
+        endTimestamp: endTimestamp,
+      );
+      return;
+    }
+
     try {
       await _service.create(
         name: name,
@@ -71,33 +92,53 @@ class SuenoCubit extends Cubit<SuenoState> {
       final updated = await _service.getByDate(state.selectedDate);
       emit(state.copyWith(sleepTimes: updated));
     } catch (e, _) {
-      final uid = _service.currentUserId ?? '';
-      if (uid.isEmpty) {
-        emit(state.copyWith(error: e.toString()));
-        return;
-      }
-      final id = 'off_${DateTime.now().millisecondsSinceEpoch}';
-      final model = RegisteredSleepTimeModel(
-        id: id,
-        userId: uid,
+      await _saveSleepOffline(
         name: name,
         startTimestamp: startTimestamp,
         endTimestamp: endTimestamp,
-        createdAt: DateTime.now(),
+        error: e.toString(),
       );
-      final rawMap = Map<String, dynamic>.from(model.toMap());
-      final safeMap = OfflinePendingService.mapToJsonSafe(rawMap);
-      await _offlinePending.addPending(
-        id: id,
-        type: 'POST',
-        collection: 'registeredSleepTimes',
-        data: jsonEncode(safeMap),
-      );
-      final merged = [...state.sleepTimes, model];
-      merged.sort((a, b) => a.startTimestamp.compareTo(b.startTimestamp));
-      final pendingIds = {...state.pendingSleepIds, id};
-      emit(state.copyWith(sleepTimes: merged, pendingSleepIds: pendingIds, error: null));
     }
+  }
+
+  Future<void> _saveSleepOffline({
+    required String name,
+    required DateTime startTimestamp,
+    required DateTime endTimestamp,
+    String? error,
+  }) async {
+    final uid = _service.currentUserId ?? '';
+    if (uid.isEmpty) {
+      emit(state.copyWith(error: error ?? 'Usuario no autenticado'));
+      return;
+    }
+    final id = 'off_${DateTime.now().millisecondsSinceEpoch}';
+    final model = RegisteredSleepTimeModel(
+      id: id,
+      userId: uid,
+      name: name,
+      startTimestamp: startTimestamp,
+      endTimestamp: endTimestamp,
+      createdAt: DateTime.now(),
+    );
+    final rawMap = Map<String, dynamic>.from(model.toMap());
+    final safeMap = OfflinePendingService.mapToJsonSafe(rawMap);
+    await _offlinePending.addPending(
+      id: id,
+      type: 'POST',
+      collection: 'registeredSleepTimes',
+      data: jsonEncode(safeMap),
+    );
+    final merged = [...state.sleepTimes, model];
+    merged.sort((a, b) => a.startTimestamp.compareTo(b.startTimestamp));
+    final pendingIds = {...state.pendingSleepIds, id};
+    emit(
+      state.copyWith(
+        sleepTimes: merged,
+        pendingSleepIds: pendingIds,
+        error: null,
+      ),
+    );
   }
 
   Future<void> deleteSleepTime(String id) async {

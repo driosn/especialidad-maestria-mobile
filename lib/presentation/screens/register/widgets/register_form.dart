@@ -69,6 +69,10 @@ class _RegisterFormState extends State<RegisterForm> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
+    if (!context.mounted) return;
+    if (context.read<AuthCubit>().state is AuthUnauthenticated) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:equilibra_mobile/data/models/registered_medical_visit_model.dart';
 import 'package:equilibra_mobile/data/services/offline_pending_service.dart';
+import 'package:equilibra_mobile/data/services/network_service.dart';
 import 'package:equilibra_mobile/data/services/registered_medical_visits_service.dart';
 import 'package:equilibra_mobile/presentation/cubits/visitas_medicas_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,8 +12,10 @@ class VisitasMedicasCubit extends Cubit<VisitasMedicasState> {
   VisitasMedicasCubit({
     RegisteredMedicalVisitsService? service,
     OfflinePendingService? offlinePendingService,
+    NetworkService? networkService,
   })  : _service = service ?? RegisteredMedicalVisitsService(),
         _offlinePending = offlinePendingService ?? OfflinePendingService(),
+        _network = networkService ?? NetworkService(),
         super(VisitasMedicasState()) {
     _loadYear(state.selectedYear);
     _subscription = _service.watchAll().listen((all) {
@@ -22,6 +25,7 @@ class VisitasMedicasCubit extends Cubit<VisitasMedicasState> {
 
   final RegisteredMedicalVisitsService _service;
   final OfflinePendingService _offlinePending;
+  final NetworkService _network;
   StreamSubscription<List<RegisteredMedicalVisitModel>>? _subscription;
 
   Future<void> _mergePending(List<RegisteredMedicalVisitModel> fromFirestore) async {
@@ -45,10 +49,6 @@ class VisitasMedicasCubit extends Cubit<VisitasMedicasState> {
     ];
     merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     emit(state.copyWith(visits: merged, pendingVisitIds: pendingIds));
-  }
-
-  void _onVisitsUpdated(List<RegisteredMedicalVisitModel> all) {
-    _filterAndEmitForYear(all, state.selectedYear);
   }
 
   Future<void> _filterAndEmitForYear(
@@ -82,12 +82,27 @@ class VisitasMedicasCubit extends Cubit<VisitasMedicasState> {
     _loadYear(year);
   }
 
+  /// Recarga visitas del año (pull-to-refresh).
+  Future<void> refresh() async => _loadYear(state.selectedYear);
+
   Future<void> registerVisit({
     required String doctorName,
     required String field,
     required String title,
     required String description,
   }) async {
+    final hasNet = await _network.hasConnection();
+
+    if (!hasNet) {
+      await _saveVisitOffline(
+        doctorName: doctorName,
+        field: field,
+        title: title,
+        description: description,
+      );
+      return;
+    }
+
     try {
       await _service.create(
         doctorName: doctorName,
@@ -98,35 +113,57 @@ class VisitasMedicasCubit extends Cubit<VisitasMedicasState> {
       final all = await _service.getAll();
       await _filterAndEmitForYear(all, state.selectedYear);
     } catch (e, _) {
-      final uid = _service.currentUserId ?? '';
-      if (uid.isEmpty) {
-        emit(state.copyWith(error: e.toString()));
-        return;
-      }
-      final id = 'off_${DateTime.now().millisecondsSinceEpoch}';
-      final now = DateTime.now();
-      final model = RegisteredMedicalVisitModel(
-        id: id,
-        userId: uid,
+      await _saveVisitOffline(
         doctorName: doctorName,
         field: field,
         title: title,
         description: description,
-        createdAt: now,
+        error: e.toString(),
       );
-      final rawMap = Map<String, dynamic>.from(model.toMap());
-      final safeMap = OfflinePendingService.mapToJsonSafe(rawMap);
-      await _offlinePending.addPending(
-        id: id,
-        type: 'POST',
-        collection: 'registeredMedicalVisits',
-        data: jsonEncode(safeMap),
-      );
-      final merged = [...state.visits, model];
-      merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      final pendingIds = {...state.pendingVisitIds, id};
-      emit(state.copyWith(visits: merged, pendingVisitIds: pendingIds, error: null));
     }
+  }
+
+  Future<void> _saveVisitOffline({
+    required String doctorName,
+    required String field,
+    required String title,
+    required String description,
+    String? error,
+  }) async {
+    final uid = _service.currentUserId ?? '';
+    if (uid.isEmpty) {
+      emit(state.copyWith(error: error ?? 'Usuario no autenticado'));
+      return;
+    }
+    final id = 'off_${DateTime.now().millisecondsSinceEpoch}';
+    final now = DateTime.now();
+    final model = RegisteredMedicalVisitModel(
+      id: id,
+      userId: uid,
+      doctorName: doctorName,
+      field: field,
+      title: title,
+      description: description,
+      createdAt: now,
+    );
+    final rawMap = Map<String, dynamic>.from(model.toMap());
+    final safeMap = OfflinePendingService.mapToJsonSafe(rawMap);
+    await _offlinePending.addPending(
+      id: id,
+      type: 'POST',
+      collection: 'registeredMedicalVisits',
+      data: jsonEncode(safeMap),
+    );
+    final merged = [...state.visits, model];
+    merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final pendingIds = {...state.pendingVisitIds, id};
+    emit(
+      state.copyWith(
+        visits: merged,
+        pendingVisitIds: pendingIds,
+        error: null,
+      ),
+    );
   }
 
   Future<void> deleteVisit(String id) async {

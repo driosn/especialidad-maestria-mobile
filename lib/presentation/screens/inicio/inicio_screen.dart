@@ -58,19 +58,28 @@ class InicioScreen extends StatelessWidget {
                           sueno.sleepTimes,
                           visitas.visits,
                         );
-                        return SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              InicioHeader(
-                                onProfileTap: onOpenProfile,
-                              ),
-                              const InicioBanner(),
-                              ResumenHoySection(data: resumenData),
-                              const SizedBox(height: 24),
-                              ActividadRecienteSection(items: activityItems),
-                              const SizedBox(height: 24),
-                            ],
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            await context.read<AlimentacionCubit>().refresh();
+                            await context.read<EjercicioCubit>().refresh();
+                            await context.read<SuenoCubit>().refresh();
+                            await context.read<VisitasMedicasCubit>().refresh();
+                          },
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                InicioHeader(
+                                  onProfileTap: onOpenProfile,
+                                ),
+                                const InicioBanner(),
+                                ResumenHoySection(data: resumenData),
+                                const SizedBox(height: 24),
+                                ActividadRecienteSection(items: activityItems),
+                                const SizedBox(height: 24),
+                              ],
+                            ),
                           ),
                         );
                       },

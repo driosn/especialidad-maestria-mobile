@@ -6,6 +6,7 @@ import 'package:equilibra_mobile/data/models/registered_meal_model.dart';
 import 'package:equilibra_mobile/data/services/default_ingredients_service.dart';
 import 'package:equilibra_mobile/data/services/meal_types_service.dart';
 import 'package:equilibra_mobile/data/services/offline_pending_service.dart';
+import 'package:equilibra_mobile/data/services/network_service.dart';
 import 'package:equilibra_mobile/data/services/registered_meals_service.dart';
 import 'package:equilibra_mobile/presentation/cubits/alimentacion_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,11 +17,13 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
     MealTypesService? mealTypesService,
     RegisteredMealsService? registeredMealsService,
     OfflinePendingService? offlinePendingService,
+    NetworkService? networkService,
   }) : _defaultIngredients =
            defaultIngredientsService ?? DefaultIngredientsService(),
        _mealTypes = mealTypesService ?? MealTypesService(),
        _registeredMeals = registeredMealsService ?? RegisteredMealsService(),
        _offlinePending = offlinePendingService ?? OfflinePendingService(),
+       _network = networkService ?? NetworkService(),
        super(AlimentacionState()) {
     _loadInitial();
     _subscription = _registeredMeals
@@ -32,6 +35,7 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
   final MealTypesService _mealTypes;
   final RegisteredMealsService _registeredMeals;
   final OfflinePendingService _offlinePending;
+  final NetworkService _network;
   StreamSubscription<List<RegisteredMealModel>>? _subscription;
 
   Future<void> _mergePending(List<RegisteredMealModel> fromFirestore) async {
@@ -90,7 +94,17 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
     _subscription = _registeredMeals.watchByDate(day).listen(_onMealsUpdated);
   }
 
+  /// Recarga tipos, ingredientes y comidas del día (pull-to-refresh).
+  Future<void> refresh() async => _loadInitial();
+
   Future<void> addMeal(MealTypeRef mealType) async {
+    final hasNet = await _network.hasConnection();
+
+    if (!hasNet) {
+      await _saveMealOffline(mealType);
+      return;
+    }
+
     try {
       await _registeredMeals.create(
         mealType: mealType,
@@ -98,32 +112,42 @@ class AlimentacionCubit extends Cubit<AlimentacionState> {
         date: state.selectedDate,
       );
     } catch (e, _) {
-      final uid = _registeredMeals.currentUserId ?? '';
-      if (uid.isEmpty) {
-        emit(state.copyWith(error: e.toString()));
-        return;
-      }
-      final id = 'off_${DateTime.now().millisecondsSinceEpoch}';
-      final meal = RegisteredMealModel(
-        id: id,
-        userId: uid,
-        mealType: mealType,
-        ingredients: [],
-        createdAt: DateTime.now(),
-        date: state.selectedDate,
-      );
-      final rawMap = Map<String, dynamic>.from(meal.toMap());
-      final safeMap = OfflinePendingService.mapToJsonSafe(rawMap);
-      await _offlinePending.addPending(
-        id: id,
-        type: 'POST',
-        collection: 'registeredMeals',
-        data: jsonEncode(safeMap),
-      );
-      final merged = [...state.meals, meal];
-      final pendingIds = {...state.pendingMealIds, id};
-      emit(state.copyWith(meals: merged, pendingMealIds: pendingIds, error: null));
+      await _saveMealOffline(mealType, error: e.toString());
     }
+  }
+
+  Future<void> _saveMealOffline(MealTypeRef mealType, {String? error}) async {
+    final uid = _registeredMeals.currentUserId ?? '';
+    if (uid.isEmpty) {
+      emit(state.copyWith(error: error ?? 'Usuario no autenticado'));
+      return;
+    }
+    final id = 'off_${DateTime.now().millisecondsSinceEpoch}';
+    final meal = RegisteredMealModel(
+      id: id,
+      userId: uid,
+      mealType: mealType,
+      ingredients: [],
+      createdAt: DateTime.now(),
+      date: state.selectedDate,
+    );
+    final rawMap = Map<String, dynamic>.from(meal.toMap());
+    final safeMap = OfflinePendingService.mapToJsonSafe(rawMap);
+    await _offlinePending.addPending(
+      id: id,
+      type: 'POST',
+      collection: 'registeredMeals',
+      data: jsonEncode(safeMap),
+    );
+    final merged = [...state.meals, meal];
+    final pendingIds = {...state.pendingMealIds, id};
+    emit(
+      state.copyWith(
+        meals: merged,
+        pendingMealIds: pendingIds,
+        error: null,
+      ),
+    );
   }
 
 

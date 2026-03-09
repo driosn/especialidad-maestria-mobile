@@ -2,25 +2,32 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equilibra_mobile/data/models/offline_pending_op_model.dart';
+import 'package:equilibra_mobile/data/services/network_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String _key = 'offline_pending';
 
+/// Mensaje cuando se intenta sincronizar sin conexión.
+const String kNoConnectionMessage = 'Sin conexión a internet. Conéctate para sincronizar.';
+
 /// Servicio que guarda en SharedPreferences las operaciones creadas sin conexión
-/// y permite sincronizarlas manualmente con Firestore.
+/// y permite sincronizarlas manualmente con Firestore (solo si hay internet).
 class OfflinePendingService {
   OfflinePendingService({
     SharedPreferences? prefs,
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
+    NetworkService? networkService,
   })  : _prefs = prefs,
         _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+        _auth = auth ?? FirebaseAuth.instance,
+        _network = networkService ?? NetworkService();
 
   SharedPreferences? _prefs;
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  final NetworkService _network;
 
   Future<SharedPreferences> get _storage async {
     _prefs ??= await SharedPreferences.getInstance();
@@ -209,9 +216,13 @@ class OfflinePendingService {
   }
 
   /// Sincroniza una operación: escribe en Firestore y la elimina de pendientes.
+  /// Lanza si no hay conexión o no hay usuario autenticado.
   Future<void> syncOne(String id) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw StateError('Usuario no autenticado');
+
+    final hasConnection = await _network.hasConnection();
+    if (!hasConnection) throw StateError(kNoConnectionMessage);
 
     final all = await getAll();
     final op = all.firstWhere((o) => o.id == id);
@@ -225,7 +236,11 @@ class OfflinePendingService {
   }
 
   /// Sincroniza todas las operaciones pendientes (una por una).
+  /// No escribe en Firestore si no hay conexión; devuelve 0 en ese caso.
   Future<int> syncAll() async {
+    final hasConnection = await _network.hasConnection();
+    if (!hasConnection) throw StateError(kNoConnectionMessage);
+
     final all = await getAll();
     int done = 0;
     for (final op in all) {

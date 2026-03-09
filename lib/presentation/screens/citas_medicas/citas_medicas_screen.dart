@@ -41,42 +41,46 @@ class _CitasMedicasView extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                VisitasResumenCard(
-                  year: state.selectedYear,
-                  totalVisits: state.totalVisits,
-                  specialistsCount: state.specialistsCount,
-                  followUpsCount: state.followUpsCount,
-                  onPreviousYear: () => context
-                      .read<VisitasMedicasCubit>()
-                      .setYear(state.selectedYear - 1),
-                  onNextYear: () => context
-                      .read<VisitasMedicasCubit>()
-                      .setYear(state.selectedYear + 1),
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    'Historial de visitas',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
+          return RefreshIndicator(
+            onRefresh: () => context.read<VisitasMedicasCubit>().refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  VisitasResumenCard(
+                    year: state.selectedYear,
+                    totalVisits: state.totalVisits,
+                    specialistsCount: state.specialistsCount,
+                    followUpsCount: state.followUpsCount,
+                    onPreviousYear: () => context
+                        .read<VisitasMedicasCubit>()
+                        .setYear(state.selectedYear - 1),
+                    onNextYear: () => context
+                        .read<VisitasMedicasCubit>()
+                        .setYear(state.selectedYear + 1),
                   ),
-                ),
-                const SizedBox(height: 8),
-                VisitasList(
-                  visits: state.visits,
-                  pendingVisitIds: state.pendingVisitIds,
-                  onOptionsTap: (visit) => _showOptions(context, visit.id),
-                  onSyncTap: (id) => _onSyncVisitTap(context, id),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Historial de visitas',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  VisitasList(
+                    visits: state.visits,
+                    pendingVisitIds: state.pendingVisitIds,
+                    onOptionsTap: (visit) => _showOptions(context, visit.id),
+                    onSyncTap: (id) => _onSyncVisitTap(context, id),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           );
         },

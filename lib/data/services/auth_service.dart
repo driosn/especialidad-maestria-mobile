@@ -1,14 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:equilibra_mobile/data/services/user_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Servicio de autenticación. Crea el documento en la colección `users`
 /// con schema: name, lastName, email, createdAt.
 class AuthService {
-  AuthService({
-    FirebaseAuth? auth,
-    UserService? userService,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _userService = userService ?? UserService();
+  AuthService({FirebaseAuth? auth, UserService? userService})
+    : _auth = auth ?? FirebaseAuth.instance,
+      _userService = userService ?? UserService();
 
   final FirebaseAuth _auth;
   final UserService _userService;
@@ -39,7 +37,12 @@ class AuthService {
   }
 
   Future<void> signIn({required String email, required String password}) async {
-    await _auth.signInWithEmailAndPassword(email: email, password: password);
+    try {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+    } catch (e) {
+      print(e);
+      throw Exception('Usuario o contraseña incorrectos');
+    }
   }
 
   Future<void> signOut() async {
